@@ -3,10 +3,16 @@ package Reminder;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
@@ -24,6 +30,7 @@ public class MainClass {
     private final int offsetY = 20;
     private final int eventBoxWidth = 500;
     private final int buttonSize = 50;
+    private final String eventFilename = "data";
 
     private JFrame constructMainWindow(int width, int height, String title) {
         JFrame window = new JFrame();
@@ -33,7 +40,36 @@ public class MainClass {
         window.setResizable(false);
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        window.addWindowListener(new WindowAdapter()
+        {
+            public void windowClosing(WindowEvent e)
+            {
+                try (FileWriter file = new FileWriter(eventFilename)) {
+                    for (Record record : events)
+                        file.write(record.toString() + '\n');
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
         return window;
+    }
+    private void readData() {
+        try {
+            Files.createFile(Path.of(eventFilename));
+        } catch (FileAlreadyExistsException ignored) {
+            try (BufferedReader file = new BufferedReader(new FileReader(new File(eventFilename)))) {
+                String line;
+                while ((line=file.readLine())!=null) {
+                    String[] buff = line.split(",");
+                    events.add(new Record(buff[0], buff[1], buff[2]));
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
     private JButton constructImageButton(Icon icon, int x, int y, int width, int height, ActionListener action) {
         JButton button = new JButton(icon);
@@ -47,24 +83,25 @@ public class MainClass {
         return panel;
     }
     private JScrollPane constructJScrollPane(int x, int y, int width, int height) {
-        String[][] data = { {"1970.01.01", "Once", "Unix Birthday"} ,
-                {"1234.03.28", "Once", "kek"}};
         String[] columns = {"Date", "Frequency", "Description"};
 
-        TableModel tableModel = new DefaultTableModel(2, 3) {
+        DefaultTableModel tableModel = new DefaultTableModel(0, 3) {
             @Override
             public String getColumnName(int index) { return columns[index]; }
         };
-        for (int i = 0; i < data.length; i++) {
-            for (int j = 0; j < data[i].length; j++)
-                tableModel.setValueAt(data[i][j], i, j);
-            String[] buff = data[i][0].split("\\.");
-            int year = Integer.parseInt(buff[0]);
-            int month = Integer.parseInt(buff[1]);
-            int day = Integer.parseInt(buff[2]);
-            events.add(new Record(LocalDate.of(year, month, day), data[i][1], data[i][2]));
+        tableModel.setNumRows(events.size());
+        for (int i = 0; i < events.size(); i++) {
+            tableModel.setValueAt(events.get(i).getDate(), i, 0);
+            tableModel.setValueAt(events.get(i).getRepeat(), i, 1);
+            tableModel.setValueAt(events.get(i).getDescription(), i, 2);
         }
         JTable table = new JTable(tableModel);
+        table.getColumnModel().getColumn(0).setMaxWidth(100);
+        table.getColumnModel().getColumn(1).setMinWidth(100);
+        table.getColumnModel().getColumn(1).setMaxWidth(100);
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        table.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
         table.setCellSelectionEnabled(true);
 
         JScrollPane scrollPane = new JScrollPane(table);
@@ -72,6 +109,7 @@ public class MainClass {
         return scrollPane;
     }
     private void run() {
+        readData();
         JFrame mainWindow = constructMainWindow(windowWidth, windowHeight, windowName);
 
         JScrollPane eventBox = constructJScrollPane(offsetX, offsetY, eventBoxWidth, windowHeight - 3 * offsetY);
@@ -83,7 +121,7 @@ public class MainClass {
         JPanel buttonPanel = constructPanel(eventBoxWidth + 2 * offsetX, offsetY,
                 windowWidth - 3 * offsetX - eventBoxWidth, windowHeight - 3 * offsetY);
         JButton addButton = constructImageButton(plusIcon, 0, 0, buttonSize, buttonSize, e -> {
-            events.add(new Record(LocalDate.of(2000, Month.JANUARY, 1), "Once", "My Birthday"));
+            events.add(new Record("31.01.2000", "EveryFortnight", "My Birthday"));
             events.sort(new Record.SortByDate());
             JViewport viewport = eventBox.getViewport();
             DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
@@ -99,8 +137,10 @@ public class MainClass {
                     JViewport viewport = eventBox.getViewport();
                     JTable table = (JTable)viewport.getView();
                     int[] selectedRows = table.getSelectedRows();
-                    for (int i = selectedRows.length - 1; i > -1; i--)
-                        ((DefaultTableModel)table.getModel()).removeRow(selectedRows[i]);
+                    for (int i = selectedRows.length - 1; i > -1; i--) {
+                        ((DefaultTableModel) table.getModel()).removeRow(selectedRows[i]);
+                        events.remove(selectedRows[i]);
+                    }
                 });
         buttonPanel.add(addButton);
         buttonPanel.add(removeButton);

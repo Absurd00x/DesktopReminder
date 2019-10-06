@@ -10,27 +10,29 @@ public class Record {
         Once, EveryDay, EveryFortnight, EveryMonth, EveryYear
     }
     private LocalDate date;
-    public LocalDate getDate() { return date; }
+    public String getDate() {
+        return String.format("%02d.%02d.%04d", date.getDayOfMonth(),
+                date.getMonth().getValue(),date.getYear());
+    }
     private String description;
     public String getDescription() { return description; }
     private Frequency repeat;
     public Frequency getRepeat() { return repeat; }
     private final SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
 
-    public Record(LocalDate date, Frequency repeat, String description) {
-        this.date = date;
-        this.description = description;
-        this.repeat = repeat;
-    }
-    public Record(LocalDate date, String repeat, String description) {
-        this.date = date;
+    public Record(String date, String repeat, String description) {
+        String[] buff = date.split("\\.");
+        int day = Integer.parseInt(buff[0]);
+        int month = Integer.parseInt(buff[1]);
+        int year = Integer.parseInt(buff[2]);
+        this.date = LocalDate.of(year, month, day);
         this.description = description;
         this.repeat = Frequency.valueOf(repeat);
     }
 
     @Override
     public String toString() {
-        return String.format("%s | %14s | %s", format.format(date), repeat, description);
+        return String.format("%s,%s,%s", getDate(), repeat, description);
     }
 
     public static class SortByDate implements Comparator<Record> {
