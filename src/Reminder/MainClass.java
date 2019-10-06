@@ -53,7 +53,7 @@ public class MainClass {
             }
         });
         return window;
-    }
+    }//
     private void readData() {
         try {
             Files.createFile(Path.of(eventFilename));
