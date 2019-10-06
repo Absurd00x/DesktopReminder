@@ -19,7 +19,7 @@ public class Record {
     private Frequency repeat;
     public Frequency getRepeat() { return repeat; }
     private final SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
-//
+
     public Record(String date, String repeat, String description) {
         String[] buff = date.split("\\.");
         int day = Integer.parseInt(buff[0]);
