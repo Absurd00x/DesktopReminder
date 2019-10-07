@@ -1,20 +1,14 @@
 package Reminder;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.time.LocalDate;
-import java.time.Month;
 import java.util.ArrayList;
 
 
@@ -31,27 +25,24 @@ public class MainClass {
     private final int eventBoxWidth = 500;
     private final int buttonSize = 50;
     private final String eventFilename = "data";
+    private final int popupWidth = 300;
+    private final int popupHeight = 200;
+    private final String popupName = "New record";
+    private final int dateLabelWidth = 50;
+    private final int frequencyLabelWidth = 100;
+    private final int descriptionLabelWidth = 100;
+    private final int labelHeight = 20;
+    private final int okCancelButtonWidth = 100;
+    private final int getOkCancelButtonHeight = 20;
 
-    private JFrame constructMainWindow(int width, int height, String title) {
+
+    private JFrame constructWindow(int width, int height, String title) {
         JFrame window = new JFrame();
         window.setSize(width, height);
         window.setTitle(title);
         window.setLayout(null);
         window.setResizable(false);
         window.setLocationRelativeTo(null);
-        window.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        window.addWindowListener(new WindowAdapter()
-        {
-            public void windowClosing(WindowEvent e)
-            {
-                try (FileWriter file = new FileWriter(eventFilename)) {
-                    for (Record record : events)
-                        file.write(record.toString() + '\n');
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
         return window;
     }
     private void readData() {
@@ -108,30 +99,90 @@ public class MainClass {
         scrollPane.setBounds(x, y, width, height);
         return scrollPane;
     }
+    private JLabel constructJLabel (int x, int y, int width, int height, String name) {
+        JLabel label = new JLabel(name);
+        label.setBounds(x, y, width, height);
+        return label;
+    }
+    private void callPopupWindow(JFrame mainWindow, JScrollPane eventBox) {
+        JDialog popup = new JDialog(mainWindow, "Add new event", true);
+        popup.setSize(popupWidth, popupHeight);
+
+        JLabel dateLabel = constructJLabel(offsetX, offsetY, dateLabelWidth, labelHeight, "Date:");
+        JLabel frequencyLabel = constructJLabel(offsetX, 3 * offsetY, frequencyLabelWidth, labelHeight, "Frequency:");
+        JLabel descriptionLabel = constructJLabel(offsetX, 5 * offsetY, descriptionLabelWidth, labelHeight, "Description:");
+
+        popup.add(dateLabel);
+        popup.add(frequencyLabel);
+        popup.add(descriptionLabel);
+
+        JButton okButton = new JButton("OK");
+        okButton.addActionListener( e -> {
+                    //events.add(record);
+                    events.sort(new Record.SortByDate());
+                    JViewport viewport = eventBox.getViewport();
+                    DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
+                    table.setNumRows(events.size());
+                    for (int i = 0; i < events.size(); i++) {
+                        table.setValueAt(events.get(i).getDate(), i, 0);
+                        table.setValueAt(events.get(i).getRepeat(), i, 1);
+                        table.setValueAt(events.get(i).getDescription(), i, 2);
+                    }
+                    popup.dispose();
+                });
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener( e -> popup.dispose());
+        //popup.add(okButton);
+        //popup.add(cancelButton);
+
+
+        GroupLayout layout = new GroupLayout(popup.getContentPane());
+        popup.getContentPane().setLayout(layout);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+        layout.setHorizontalGroup(
+                layout.createParallelGroup(GroupLayout.Alignment.TRAILING)
+                    .addComponent(dateLabel)
+                    .addComponent(frequencyLabel)
+                    .addComponent(descriptionLabel)
+        );
+        layout.setVerticalGroup(
+                layout.createSequentialGroup()
+                    .addComponent(dateLabel)
+                    .addComponent(frequencyLabel)
+                    .addComponent(descriptionLabel)
+        );
+        popup.setLocationRelativeTo(null);
+        popup.setVisible(true);
+        //new Record("31.01.2000", "EveryFortnight", "My birthday");
+    }
     private void run() {
         readData();
-        JFrame mainWindow = constructMainWindow(windowWidth, windowHeight, windowName);
+        JFrame mainWindow = constructWindow(windowWidth, windowHeight, windowName);
+        mainWindow.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        mainWindow.addWindowListener(new WindowAdapter()
+        {
+            public void windowClosing(WindowEvent e)
+            {
+                try (FileWriter file = new FileWriter(eventFilename)) {
+                    for (Record record : events)
+                        file.write(record.toString() + '\n');
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
 
         JScrollPane eventBox = constructJScrollPane(offsetX, offsetY, eventBoxWidth, windowHeight - 3 * offsetY);
         mainWindow.add(eventBox);
 
-        ImageIcon plusIcon = new ImageIcon("./Icons/SmallPlus.png");
-        ImageIcon minusIcon = new ImageIcon("./Icons/SmallMinus.png");
+        ImageIcon plusIcon = new ImageIcon("./Icons/Plus.png");
+        ImageIcon minusIcon = new ImageIcon("./Icons/Minus.png");
 
         JPanel buttonPanel = constructPanel(eventBoxWidth + 2 * offsetX, offsetY,
                 windowWidth - 3 * offsetX - eventBoxWidth, windowHeight - 3 * offsetY);
-        JButton addButton = constructImageButton(plusIcon, 0, 0, buttonSize, buttonSize, e -> {
-            events.add(new Record("31.01.2000", "EveryFortnight", "My Birthday"));
-            events.sort(new Record.SortByDate());
-            JViewport viewport = eventBox.getViewport();
-            DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
-            table.setNumRows(events.size());
-            for (int i = 0; i < events.size(); i++) {
-                table.setValueAt(events.get(i).getDate(), i, 0);
-                table.setValueAt(events.get(i).getRepeat(), i, 1);
-                table.setValueAt(events.get(i).getDescription(), i, 2);
-            }
-        });
+        JButton addButton = constructImageButton(plusIcon, 0, 0, buttonSize, buttonSize,
+                e -> callPopupWindow(mainWindow, eventBox));
         JButton removeButton = constructImageButton(minusIcon, 0, buttonSize + offsetY,
                 buttonSize, buttonSize, e -> {
                     JViewport viewport = eventBox.getViewport();
