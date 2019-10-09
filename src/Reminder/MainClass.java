@@ -3,6 +3,8 @@ package Reminder;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -218,25 +220,38 @@ public class MainClass {
         JScrollPane eventBox = constructJScrollPane(offsetX, offsetY, eventBoxWidth, windowHeight - 3 * offsetY);
         mainWindow.add(eventBox);
 
-        ImageIcon plusIcon = new ImageIcon("./Icons/Plus.png");
-        ImageIcon minusIcon = new ImageIcon("./Icons/Minus.png");
+        JButton removeButton = new JButton("Remove");
 
-        JPanel buttonPanel = constructPanel(eventBoxWidth + 2 * offsetX, offsetY,
-                windowWidth - 3 * offsetX - eventBoxWidth, windowHeight - 3 * offsetY);
-        JButton addButton = constructImageButton(plusIcon, 0, 0, buttonSize, buttonSize,
-                e -> callPopupWindow(mainWindow, eventBox));
-        JButton removeButton = constructImageButton(minusIcon, 0, buttonSize + offsetY,
-                buttonSize, buttonSize, e -> {
-                    JViewport viewport = eventBox.getViewport();
-                    JTable table = (JTable)viewport.getView();
-                    int[] selectedRows = table.getSelectedRows();
-                    for (int i = selectedRows.length - 1; i > -1; i--) {
-                        ((DefaultTableModel) table.getModel()).removeRow(selectedRows[i]);
-                        events.remove(selectedRows[i]);
-                    }
-                });
+        JButton addButton = new JButton("Add");
+        addButton.addActionListener(e -> callPopupWindow(mainWindow, eventBox));
+        addButton.setMinimumSize(removeButton.getPreferredSize());
+        addButton.setMaximumSize(removeButton.getPreferredSize());
+
+
+        JButton exitButton = new JButton("Exit");
+        exitButton.addActionListener(e -> mainWindow.dispose());
+        exitButton.setMinimumSize(removeButton.getPreferredSize());
+        exitButton.setMaximumSize(removeButton.getPreferredSize());
+
+        removeButton.addActionListener(e -> {
+            JViewport viewport = eventBox.getViewport();
+            JTable table = (JTable)viewport.getView();
+            int[] selectedRows = table.getSelectedRows();
+            for (int i = selectedRows.length - 1; i > -1; i--) {
+                ((DefaultTableModel) table.getModel()).removeRow(selectedRows[i]);
+                events.remove(selectedRows[i]);
+            }
+        });
+
+        JPanel buttonPanel = constructPanel(eventBoxWidth + offsetX + offsetX / 2, offsetY,
+                windowWidth - 2 * offsetX - eventBoxWidth, windowHeight - 3 * offsetY);
+
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.PAGE_AXIS));
         buttonPanel.add(addButton);
+        buttonPanel.add(Box.createVerticalStrut(offsetY));
         buttonPanel.add(removeButton);
+        buttonPanel.add(Box.createVerticalStrut(16 * offsetY));
+        buttonPanel.add(exitButton);
         mainWindow.add(buttonPanel);
 
         mainWindow.setVisible(true);
