@@ -3,16 +3,15 @@ package Reminder;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.HashMap;
-
 
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
@@ -27,15 +26,8 @@ public class MainClass {
     private final int eventBoxWidth = 500;
     private final int buttonSize = 50;
     private final String eventFilename = "data";
-    private final int popupWidth = 400;
+    private final int popupWidth = 450;
     private final int popupHeight = 200;
-    private final String popupName = "New record";
-    private final int dateLabelWidth = 50;
-    private final int frequencyLabelWidth = 100;
-    private final int descriptionLabelWidth = 100;
-    private final int labelHeight = 20;
-    private final int okCancelButtonWidth = 100;
-    private final int getOkCancelButtonHeight = 20;
 
 
     private JFrame constructWindow(int width, int height, String title) {
@@ -101,6 +93,17 @@ public class MainClass {
         scrollPane.setBounds(x, y, width, height);
         return scrollPane;
     }
+    private void changeDays(JComboBox<Integer> days, JComboBox<String> months, JSpinner years) {
+        YearMonth buff = YearMonth.of((Integer) years.getValue(), months.getSelectedIndex() + 1);
+        int daysInMonth = buff.lengthOfMonth();
+        while (days.getItemCount() > daysInMonth) {
+            if (days.getSelectedIndex() == days.getItemCount() - 1)
+                days.setSelectedIndex(days.getSelectedIndex() - 1);
+            days.removeItemAt(days.getItemCount() - 1);
+        }
+        while (days.getItemCount() <= daysInMonth)
+            days.addItem(days.getItemCount());
+    }
     private void callPopupWindow(JFrame mainWindow, JScrollPane eventBox) {
         JDialog popup = new JDialog(mainWindow, "Add new event", true);
         popup.setSize(popupWidth, popupHeight);
@@ -113,7 +116,8 @@ public class MainClass {
         popup.add(frequencyLabel);
         popup.add(descriptionLabel);
 
-        JTextField frequencyText = new JTextField("Select frequency");
+        String[] frequencies = {"Once", "Every day", "Every fortnight", "Every month", "Every year"};
+        JComboBox<String> selectFrequency = new JComboBox<>(frequencies);
         SpinnerModel spinnermModel = new SpinnerNumberModel(2000, 0, 3000, 1);
         JSpinner selectYear = new JSpinner(spinnermModel);
         String[] months = {"January", "February", "March", "April", "May", "June", "July",
@@ -122,34 +126,31 @@ public class MainClass {
         Integer[] days = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
         21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
         JComboBox<Integer> selectDay = new JComboBox<>(days);
-        selectMonth.addActionListener(e -> {
-            YearMonth buff = YearMonth.of((Integer) selectYear.getValue(), selectMonth.getSelectedIndex() + 1);
-            int daysInMonth = buff.lengthOfMonth();
-            while (selectDay.getItemCount() > daysInMonth) {
-                if (selectDay.getSelectedIndex() == selectDay.getItemCount() - 1)
-                    selectDay.setSelectedIndex(selectDay.getSelectedIndex() - 1);
-                selectDay.removeItemAt(selectDay.getItemCount() - 1);
-            }
-            while (selectDay.getItemCount() < daysInMonth)
-                selectDay.addItem(selectDay.getItemCount());
-        });
+        selectMonth.addActionListener(e -> changeDays(selectDay, selectMonth, selectYear));
+        selectYear.addChangeListener(e -> changeDays(selectDay, selectMonth, selectYear));
         JTextField descriptionText = new JTextField("Add description");
 
         JButton okButton = new JButton("OK");
         okButton.addActionListener( e -> {
-                    //events.add(record);
-                    System.out.println(selectMonth.getItemAt(selectMonth.getSelectedIndex()));
-                    events.sort(new Record.SortByDate());
-                    JViewport viewport = eventBox.getViewport();
-                    DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
-                    table.setNumRows(events.size());
-                    for (int i = 0; i < events.size(); i++) {
-                        table.setValueAt(events.get(i).getDate(), i, 0);
-                        table.setValueAt(events.get(i).getRepeat(), i, 1);
-                        table.setValueAt(events.get(i).getDescription(), i, 2);
-                    }
-                    popup.dispose();
-                });
+            String date = String.format(
+                    "%s.%s.%s",
+                    selectDay.getSelectedItem(),
+                    selectMonth.getSelectedIndex() + 1,
+                    selectYear.getValue());
+            String frequency = Record.Frequency.values()[selectFrequency.getSelectedIndex()].toString();
+            String description = descriptionText.getText();
+            events.add(new Record(date, frequency, description));
+            events.sort(new Record.SortByDate());
+            JViewport viewport = eventBox.getViewport();
+            DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
+            table.setNumRows(events.size());
+            for (int i = 0; i < events.size(); i++) {
+                table.setValueAt(events.get(i).getDate(), i, 0);
+                table.setValueAt(events.get(i).getRepeat(), i, 1);
+                table.setValueAt(events.get(i).getDescription(), i, 2);
+            }
+            popup.dispose();
+        });
         JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener( e -> popup.dispose());
         popup.add(okButton);
@@ -160,20 +161,22 @@ public class MainClass {
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
-        layout.setHorizontalGroup(
-                layout.createSequentialGroup()
-                    .addGroup(layout.createParallelGroup(GroupLayout.Alignment.TRAILING)
-                        .addComponent(dateLabel)
-                        .addComponent(frequencyLabel)
-                        .addComponent(descriptionLabel)
-                        .addComponent(okButton))
-                    .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
-                        .addComponent(selectDay)
-                        .addComponent(frequencyText)
-                        .addComponent(descriptionText)
-                        .addComponent(cancelButton))
-                    .addComponent(selectMonth)
-                    .addComponent(selectYear)
+        layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.TRAILING)
+                    .addComponent(dateLabel)
+                    .addComponent(frequencyLabel)
+                    .addComponent(descriptionLabel))
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                    .addComponent(descriptionText)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup()
+                            .addComponent(selectDay)
+                            .addComponent(selectFrequency)
+                            .addComponent(okButton))
+                        .addGroup(layout.createParallelGroup()
+                            .addComponent(selectMonth)
+                            .addComponent(cancelButton))
+                    .addComponent(selectYear)))
         );
         layout.setVerticalGroup(
                 layout.createSequentialGroup()
@@ -184,7 +187,7 @@ public class MainClass {
                             .addComponent(selectYear))
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                             .addComponent(frequencyLabel)
-                            .addComponent(frequencyText))
+                            .addComponent(selectFrequency))
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                             .addComponent(descriptionLabel)
                             .addComponent(descriptionText))
@@ -194,7 +197,6 @@ public class MainClass {
         );
         popup.setLocationRelativeTo(null);
         popup.setVisible(true);
-        //new Record("31.01.2000", "EveryFortnight", "My birthday");
     }
     private void run() {
         readData();
