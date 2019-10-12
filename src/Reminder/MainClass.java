@@ -58,12 +58,6 @@ public class MainClass {
             ex.printStackTrace();
         }
     }
-    private JButton constructImageButton(Icon icon, int x, int y, int width, int height, ActionListener action) {
-        JButton button = new JButton(icon);
-        button.setBounds(x, y, width, height);
-        button.addActionListener(action);
-        return button;
-    }
     private JPanel constructPanel(int x, int y, int width, int height) {
         JPanel panel = new JPanel();
         panel.setBounds(x, y, width, height);
@@ -103,8 +97,8 @@ public class MainClass {
                 days.setSelectedIndex(days.getSelectedIndex() - 1);
             days.removeItemAt(days.getItemCount() - 1);
         }
-        while (days.getItemCount() <= daysInMonth)
-            days.addItem(days.getItemCount());
+        while (days.getItemCount() < daysInMonth)
+            days.addItem(days.getItemCount() + 1);
     }
     private void callPopupWindow(JFrame mainWindow, JScrollPane eventBox) {
         JDialog popup = new JDialog(mainWindow, "Add new event", true);
@@ -200,6 +194,14 @@ public class MainClass {
         popup.setLocationRelativeTo(null);
         popup.setVisible(true);
     }
+    private void saveFile() {
+        try (FileWriter file = new FileWriter(eventFilename)) {
+            for (Record record : events)
+                file.write(record.toString() + '\n');
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
     private void run() {
         readData();
         JFrame mainWindow = constructWindow(windowWidth, windowHeight, windowName);
@@ -208,12 +210,7 @@ public class MainClass {
         {
             public void windowClosing(WindowEvent e)
             {
-                try (FileWriter file = new FileWriter(eventFilename)) {
-                    for (Record record : events)
-                        file.write(record.toString() + '\n');
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
+                saveFile();
             }
         });
 
@@ -229,7 +226,10 @@ public class MainClass {
 
 
         JButton exitButton = new JButton("Exit");
-        exitButton.addActionListener(e -> mainWindow.dispose());
+        exitButton.addActionListener(e -> {
+            saveFile();
+            mainWindow.dispose();
+        });
         exitButton.setMinimumSize(removeButton.getPreferredSize());
         exitButton.setMaximumSize(removeButton.getPreferredSize());
 
