@@ -12,9 +12,11 @@ import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 
+import static java.time.temporal.ChronoUnit.DAYS;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 public class MainClass {
@@ -72,8 +74,8 @@ public class MainClass {
         };
         tableModel.setNumRows(events.size());
         for (int i = 0; i < events.size(); i++) {
-            tableModel.setValueAt(events.get(i).getDate(), i, 0);
-            tableModel.setValueAt(events.get(i).getRepeat(), i, 1);
+            tableModel.setValueAt(events.get(i).getStringDate(), i, 0);
+            tableModel.setValueAt(events.get(i).getfrequency(), i, 1);
             tableModel.setValueAt(events.get(i).getDescription(), i, 2);
         }
         JTable table = new JTable(tableModel);
@@ -112,7 +114,7 @@ public class MainClass {
         popup.add(frequencyLabel);
         popup.add(descriptionLabel);
 
-        String[] frequencies = {"Once", "Every day", "Every fortnight", "Every month", "Every year"};
+        String[] frequencies = {"Once", "Every day", "Every week", "Every fortnight", "Every month", "Every year"};
         JComboBox<String> selectFrequency = new JComboBox<>(frequencies);
         SpinnerModel spinnermModel = new SpinnerNumberModel(2000, 0, 3000, 1);
         JSpinner selectYear = new JSpinner(spinnermModel);
@@ -141,8 +143,8 @@ public class MainClass {
             DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
             table.setNumRows(events.size());
             for (int i = 0; i < events.size(); i++) {
-                table.setValueAt(events.get(i).getDate(), i, 0);
-                table.setValueAt(events.get(i).getRepeat(), i, 1);
+                table.setValueAt(events.get(i).getStringDate(), i, 0);
+                table.setValueAt(events.get(i).getfrequency(), i, 1);
                 table.setValueAt(events.get(i).getDescription(), i, 2);
             }
             popup.dispose();
@@ -256,8 +258,52 @@ public class MainClass {
 
         mainWindow.setVisible(true);
     }
+    private void checkDates() {
+        readData();
+        LocalDate currentDate = LocalDate.now();
+        ArrayList<Record> datesToDisplay = new ArrayList<>();
+        for (Record event : events) {
+            switch (event.getfrequency()) {
+                case Once:
+                    if (event.getDate().equals(currentDate))
+                        datesToDisplay.add(event);
+                    break;
+                case EveryDay:
+                    datesToDisplay.add(event);
+                    break;
+                case EveryWeek:
+                    if (DAYS.between(currentDate, event.getDate()) % 7 == 0)
+                        datesToDisplay.add(event);
+                    break;
+                case EveryFortnight:
+                    System.out.println(DAYS.between(currentDate, event.getDate()));
+                    if (DAYS.between(currentDate, event.getDate()) % 14 == 0)
+                        datesToDisplay.add(event);
+                case EveryMonth:
+                    int daysInCurrentMonth = YearMonth.now().lengthOfMonth();
+                    if (daysInCurrentMonth < event.getDate().getDayOfMonth()
+                    && currentDate.getDayOfMonth() == daysInCurrentMonth)
+                        datesToDisplay.add(event);
+                    else if (currentDate.getDayOfMonth() == event.getDate().getDayOfMonth())
+                        datesToDisplay.add(event);
+                    break;
+                case EveryYear:
+                    if (currentDate.getMonth() == event.getDate().getMonth()
+                    && currentDate.getDayOfMonth() == event.getDate().getDayOfMonth())
+                        datesToDisplay.add(event);
+                    break;
+            }
+        }
+    }
     public static void main(String[] args) {
         MainClass mc = new MainClass();
-        mc.run();
+        boolean noEdit = false;
+        for (String arg : args)
+            if (arg.equals("--noedit"))
+                noEdit = true;
+        if(!noEdit)
+            mc.run();
+        else
+            mc.checkDates();
     }
 }
