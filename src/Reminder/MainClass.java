@@ -1,11 +1,10 @@
 package Reminder;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
@@ -24,12 +23,11 @@ public class MainClass {
     private ArrayList<Record> events = new ArrayList<>();
     private final int windowWidth = 640;
     private final int windowHeight = 480;
-    private final String windowName = "Reminder";
     private final int offsetX = 20;
     private final int offsetY = 20;
     private final int eventBoxWidth = 500;
-    private final int buttonSize = 50;
-    private final String eventFilename = "data";
+    private final int buttonSize = 60;
+    private final String eventFilename = "data.csv";
     private final int popupWidth = 450;
     private final int popupHeight = 200;
 
@@ -66,7 +64,7 @@ public class MainClass {
         return panel;
     }
     private JScrollPane constructJScrollPane(int x, int y, int width, int height) {
-        String[] columns = {"Date", "Frequency", "Description"};
+        String[] columns = {"Date", "Frequency", "Note"};
 
         DefaultTableModel tableModel = new DefaultTableModel(0, 3) {
             @Override
@@ -75,8 +73,8 @@ public class MainClass {
         tableModel.setNumRows(events.size());
         for (int i = 0; i < events.size(); i++) {
             tableModel.setValueAt(events.get(i).getStringDate(), i, 0);
-            tableModel.setValueAt(events.get(i).getfrequency(), i, 1);
-            tableModel.setValueAt(events.get(i).getDescription(), i, 2);
+            tableModel.setValueAt(events.get(i).getFrequency(), i, 1);
+            tableModel.setValueAt(events.get(i).getNote(), i, 2);
         }
         JTable table = new JTable(tableModel);
         table.getColumnModel().getColumn(0).setMaxWidth(100);
@@ -108,11 +106,11 @@ public class MainClass {
 
         JLabel dateLabel = new JLabel("Date:");
         JLabel frequencyLabel = new JLabel("Frequency:");
-        JLabel descriptionLabel = new JLabel("Description:");
+        JLabel noteLabel = new JLabel("Note:");
 
         popup.add(dateLabel);
         popup.add(frequencyLabel);
-        popup.add(descriptionLabel);
+        popup.add(noteLabel);
 
         String[] frequencies = {"Once", "Every day", "Every week", "Every fortnight", "Every month", "Every year"};
         JComboBox<String> selectFrequency = new JComboBox<>(frequencies);
@@ -126,7 +124,7 @@ public class MainClass {
         JComboBox<Integer> selectDay = new JComboBox<>(days);
         selectMonth.addActionListener(e -> changeDays(selectDay, selectMonth, selectYear));
         selectYear.addChangeListener(e -> changeDays(selectDay, selectMonth, selectYear));
-        JTextField descriptionText = new JTextField("Add description");
+        JTextField noteText = new JTextField("Add note");
 
         JButton okButton = new JButton("OK");
         okButton.addActionListener( e -> {
@@ -136,16 +134,16 @@ public class MainClass {
                     selectMonth.getSelectedIndex() + 1,
                     selectYear.getValue());
             String frequency = Record.Frequency.values()[selectFrequency.getSelectedIndex()].toString();
-            String description = descriptionText.getText();
-            events.add(new Record(date, frequency, description));
+            String note = noteText.getText();
+            events.add(new Record(date, frequency, note));
             events.sort(new Record.SortByDate());
             JViewport viewport = eventBox.getViewport();
             DefaultTableModel table = ((DefaultTableModel) ((JTable) viewport.getView()).getModel());
             table.setNumRows(events.size());
             for (int i = 0; i < events.size(); i++) {
                 table.setValueAt(events.get(i).getStringDate(), i, 0);
-                table.setValueAt(events.get(i).getfrequency(), i, 1);
-                table.setValueAt(events.get(i).getDescription(), i, 2);
+                table.setValueAt(events.get(i).getFrequency(), i, 1);
+                table.setValueAt(events.get(i).getNote(), i, 2);
             }
             popup.dispose();
         });
@@ -163,9 +161,9 @@ public class MainClass {
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.TRAILING)
                     .addComponent(dateLabel)
                     .addComponent(frequencyLabel)
-                    .addComponent(descriptionLabel))
+                    .addComponent(noteLabel))
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
-                    .addComponent(descriptionText)
+                    .addComponent(noteText)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup()
                             .addComponent(selectDay)
@@ -187,8 +185,8 @@ public class MainClass {
                             .addComponent(frequencyLabel)
                             .addComponent(selectFrequency))
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
-                            .addComponent(descriptionLabel)
-                            .addComponent(descriptionText))
+                            .addComponent(noteLabel)
+                            .addComponent(noteText))
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                             .addComponent(okButton)
                             .addComponent(cancelButton))
@@ -206,7 +204,7 @@ public class MainClass {
     }
     private void run() {
         readData();
-        JFrame mainWindow = constructWindow(windowWidth, windowHeight, windowName);
+        JFrame mainWindow = constructWindow(windowWidth, windowHeight, "Reminder");
         mainWindow.setDefaultCloseOperation(EXIT_ON_CLOSE);
         mainWindow.addWindowListener(new WindowAdapter()
         {
@@ -263,7 +261,7 @@ public class MainClass {
         LocalDate currentDate = LocalDate.now();
         ArrayList<Record> datesToDisplay = new ArrayList<>();
         for (Record event : events) {
-            switch (event.getfrequency()) {
+            switch (event.getFrequency()) {
                 case Once:
                     if (event.getDate().equals(currentDate))
                         datesToDisplay.add(event);
@@ -272,13 +270,13 @@ public class MainClass {
                     datesToDisplay.add(event);
                     break;
                 case EveryWeek:
-                    if (DAYS.between(currentDate, event.getDate()) % 7 == 0)
+                    if (Math.abs(DAYS.between(currentDate, event.getDate())) % 7 == 0)
                         datesToDisplay.add(event);
                     break;
                 case EveryFortnight:
-                    System.out.println(DAYS.between(currentDate, event.getDate()));
-                    if (DAYS.between(currentDate, event.getDate()) % 14 == 0)
+                    if (Math.abs(DAYS.between(currentDate, event.getDate())) % 14 == 0)
                         datesToDisplay.add(event);
+                    break;
                 case EveryMonth:
                     int daysInCurrentMonth = YearMonth.now().lengthOfMonth();
                     if (daysInCurrentMonth < event.getDate().getDayOfMonth()
@@ -294,13 +292,37 @@ public class MainClass {
                     break;
             }
         }
+        if (!datesToDisplay.isEmpty()) {
+            JFrame mainWindow = constructWindow(windowWidth / 2, windowHeight / 2, "Notes today");
+            mainWindow.setDefaultCloseOperation(EXIT_ON_CLOSE);
+            mainWindow.getContentPane().setBackground(Color.LIGHT_GRAY);
+
+            String[] notes = new String[datesToDisplay.size()];
+            for (int i = 0; i < notes.length; i++)
+                notes[i] = datesToDisplay.get(i).getNote();
+            JList<String> notesList = new JList<>(notes);
+            notesList.setBorder(new EmptyBorder(5, 5, 5, 5));
+            notesList.setBounds(offsetX, offsetY, windowWidth / 2 - offsetX * 2,
+                    windowHeight / 2 - offsetY * 5);
+            JButton okButton = new JButton("Ok");
+            okButton.setBounds((windowWidth / 2 - buttonSize) / 2, windowHeight / 2 - 3 * offsetY,
+                    buttonSize, offsetY);
+            okButton.addActionListener(e -> mainWindow.dispose());
+
+            mainWindow.add(notesList);
+            mainWindow.add(okButton);
+
+            mainWindow.setVisible(true);
+        }
     }
     public static void main(String[] args) {
         MainClass mc = new MainClass();
         boolean noEdit = false;
         for (String arg : args)
-            if (arg.equals("--noedit"))
+            if (arg.equals("--noedit")) {
                 noEdit = true;
+                break;
+            }
         if(!noEdit)
             mc.run();
         else

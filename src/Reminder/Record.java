@@ -15,24 +15,24 @@ public class Record {
         return String.format("%02d.%02d.%04d", date.getDayOfMonth(),
                 date.getMonth().getValue(),date.getYear());
     }
-    private String description;
-    String getDescription() { return description; }
+    private String note;
+    String getNote() { return note; }
     private Frequency frequency;
-    Frequency getfrequency() { return frequency; }
+    Frequency getFrequency() { return frequency; }
 
-    Record(String date, String frequency, String description) {
+    Record(String date, String frequency, String note) {
         String[] buff = date.split("\\.");
         int day = Integer.parseInt(buff[0]);
         int month = Integer.parseInt(buff[1]);
         int year = Integer.parseInt(buff[2]);
         this.date = LocalDate.of(year, month, day);
-        this.description = description;
+        this.note = note;
         this.frequency = Frequency.valueOf(frequency);
     }
 
     @Override
     public String toString() {
-        return String.format("%s,%s,%s", getStringDate(), frequency, description);
+        return String.format("%s,%s,%s", getStringDate(), frequency, note);
     }
 
     public static class SortByDate implements Comparator<Record> {
